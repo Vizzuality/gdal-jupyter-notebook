@@ -70,7 +70,7 @@ RUN mkdir /home/$NB_USER/work && \
     mkdir /home/$NB_USER/.jupyter && \
     echo "cacert=/etc/ssl/certs/ca-certificates.crt" > /home/$NB_USER/.curlrc
 
-# Install conda as vizzuality
+# Install the latest conda as vizzuality
 RUN cd /tmp &&										\
     mkdir -p $CONDA_DIR &&								\
     wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh &&	\
@@ -83,10 +83,18 @@ RUN cd /tmp &&										\
 
 # Install Jupyter Notebook and Hub
 RUN conda install --quiet --yes \
-    'notebook=4.3*' \
-    jupyterhub=0.7 \
+    'notebook=4.3*'		\
+    jupyterhub=0.7		\
     && conda clean -tipsy
 
+# Install Python 3 packages
+
+COPY conda_requirements.txt .
+RUN conda install --quiet --yes $(cat conda_requirements.txt) &&	\
+    conda remove --quiet --yes --force qt pyqt &&			\
+    conda clean -tipsy
+
+RUN jupyter nbextension enable --py widgetsnbextension --sys-prefix
 
 USER root
 
