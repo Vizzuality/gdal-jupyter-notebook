@@ -1,5 +1,5 @@
 FROM debian@sha256:f7062cf040f67f0c26ff46b3b44fe036c29468a7e69d8170f37c57f2eec1261b
-# 2016-05-03 debian image
+# 2016-05-03 Debian image
 MAINTAINER Enrique Cornejo "enrique@cornejo.me"
 
 # Environment variables
@@ -14,7 +14,7 @@ ENV LC_ALL en_US.UTF-8
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8
 
-# Install 
+# Install debian packages
 USER root
 RUN apt-get update && apt-get -yq dist-upgrade		\
     && apt-get install -yq --no-install-recommends	\
@@ -106,5 +106,6 @@ COPY start-notebook.sh /usr/local/bin/
 COPY jupyter_notebook_config.py /home/$NB_USER/.jupyter/
 RUN chown -R $NB_USER:users /home/$NB_USER/.jupyter
 
-# Switch back to jovyan to avoid accidental container runs as root
+# Switch back to Vizzuality to avoid accidental container runs as root
+WORKDIR /home/vizzuality/work
 USER $NB_USER
