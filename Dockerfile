@@ -2,18 +2,6 @@ FROM debian@sha256:f7062cf040f67f0c26ff46b3b44fe036c29468a7e69d8170f37c57f2eec12
 # 2016-05-03 debian image
 MAINTAINER Enrique Cornejo "enrique@cornejo.me"
 
-# USER root
-# RUN apt-get update && sudo apt-get upgrade -y
-# RUN apt-get install -y git wget bzip2   \
-#     build-essential python-dev gfortran \
-#     gdal-bin libgdal-dev
-# # Hacky, but if not GDAL complains --there's got to be a
-# # better solution.
-# RUN ln -s /opt/conda/lib/libjpeg.so.9 /opt/conda/lib/libjpeg.so.8
-# RUN ldconfig
-# RUN conda install -y gdal
-# RUN echo $(python --version)
-
 # Environment variables
 ENV DEBIAN_FRONTEND noninteractive
 ENV CONDA_DIR /opt/conda
@@ -26,16 +14,15 @@ ENV LC_ALL en_US.UTF-8
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8
 
-
+# Install 
 USER root
-
-# Install all OS dependencies for notebook server that starts but lacks all
-# features (e.g., download as all possible file formats)
-
-# RUN echo "deb $REPO/debian jessie main\ndeb $REPO/debian-security jessie/updates main" > /etc/apt/sources.list
 RUN apt-get update && apt-get -yq dist-upgrade		\
     && apt-get install -yq --no-install-recommends	\
     wget         					\
+    python-dev						\
+    gfortran						\
+    gdal-bin						\
+    libgdal-dev						\
     build-essential					\
     bzip2						\
     ca-certificates					\
@@ -43,22 +30,21 @@ RUN apt-get update && apt-get -yq dist-upgrade		\
     locales						\
     # libav is needed to animate matplolib stuff
     libav-tools 					\
+    # ICU gives unicode libraries. Necessary for osgeo
+    icu-devtools					\
     && apt-get clean                                    \
     && rm -rf /var/lib/apt/lists/*
 
 # Generate the locales
-RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen &&       \
-    locale-gen
+RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && locale-gen
 
-# Let's install a basic data science environment
-
-# Tini
+# Tini is a basic init system
 ENV TINI_VERSION v0.14.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/local/bin/tini
 RUN chmod +x /usr/local/bin/tini
 ENTRYPOINT ["/usr/local/bin/tini", "--"]
 
-# Create jovyan user with UID=1000 and in the 'users' group
+# Create the vizzuality user with UID=1000 and in the 'users' group
 RUN useradd -m -s /bin/bash -N -u $NB_UID $NB_USER && \
     mkdir -p $CONDA_DIR && \
     chown $NB_USER $CONDA_DIR
@@ -78,7 +64,7 @@ RUN cd /tmp &&										\
     rm Miniconda3-latest-Linux-x86_64.sh &&						\
     $CONDA_DIR/bin/conda config --system --add channels conda-forge &&			\
     $CONDA_DIR/bin/conda config --system --set auto_update_conda false &&		\
-    conda install --quiet --yes -n root conda-build &&						\
+    conda install --quiet --yes -n root conda-build &&				 	\
     conda clean -tipsy
 
 # Install Jupyter Notebook and Hub
@@ -87,21 +73,29 @@ RUN conda install --quiet --yes \
     jupyterhub=0.7		\
     && conda clean -tipsy
 
-# Install Python 3 packages
+# Install Python 3 packages with Conda
 
 COPY conda_requirements.txt .
 RUN conda install --quiet --yes $(cat conda_requirements.txt) &&	\
     conda remove --quiet --yes --force qt pyqt &&			\
     conda clean -tipsy
 
+# Interactive widgets for Jupyter
 RUN jupyter nbextension enable --py widgetsnbextension --sys-prefix
 
+# Configure container startup
 USER root
-
 EXPOSE 8888
 WORKDIR /home/$NB_USER/work
 
-# Configure container startup
+# Cthulhu fhtagn!
+RUN ln -s /opt/conda/lib/libjpeg.so.9 /opt/conda/lib/libjpeg.so.8
+# R'lyeh!
+RUN ln -s /usr/lib/x86_64-linux-gnu/libicuuc.so.52 /usr/lib/x86_64-linux-gnu/libicuuc.so.58
+RUN ln -s /usr/lib/x86_64-linux-gnu/libicui18n.so.52 /usr/lib/x86_64-linux-gnu/libicui18n.so.58
+RUN ln -s /usr/lib/x86_64-linux-gnu/libicudata.so.52 /usr/lib/x86_64-linux-gnu/libicudata.so.58
+RUN ldconfig
+
 ENTRYPOINT ["/usr/local/bin/tini", "--"]
 CMD ["start-notebook.sh"]
 
