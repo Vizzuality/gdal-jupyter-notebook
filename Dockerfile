@@ -65,6 +65,7 @@ RUN cd /tmp &&										\
     $CONDA_DIR/bin/conda config --system --add channels conda-forge &&			\
     $CONDA_DIR/bin/conda config --system --set auto_update_conda false &&		\
     conda install --quiet --yes -n root conda-build &&				 	\
+    conda install --quiet --yes -n root 'python=3.5*' && 				\
     conda clean -tipsy
 
 # Install Jupyter Notebook and Hub
